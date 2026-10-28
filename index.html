@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Quản Lý Mẫu Bê Tông</title>
+  
+  <!-- Inter & Roboto Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            appblue: {
+              50: '#eef6ff',
+              100: '#e0edff',
+              500: '#1d5bd8',
+              600: '#164ec0',
+              700: '#123eb0',
+            },
+            appgreen: {
+              500: '#0d8a52',
+              600: '#0b7847',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+
+<body class="h-full flex flex-col text-slate-800 bg-[#f3f6fa] pb-20 select-none">
+
+  <!-- 1. COMPACT HEADER -->
+  <header class="bg-appblue-600 text-white px-3 py-1.5 sticky top-0 z-30 shadow-md flex justify-between items-center">
+    <div class="flex items-center gap-1.5">
+      <div class="w-5 h-5 rounded bg-amber-400 text-slate-900 flex items-center justify-center font-bold text-xs shadow-xs">
+        <i class="fa-solid fa-cubes"></i>
+      </div>
+      <h1 class="text-xs font-bold tracking-tight">Quản Lý Mẫu Bê Tông</h1>
+    </div>
+
+    <!-- Unified Backup / Restore Dropdown Button -->
+    <div class="relative">
+      <button onclick="toggleBackupMenu()" class="bg-white/15 hover:bg-white/25 active:scale-95 text-[11px] font-semibold px-2 py-0.5 rounded-md flex items-center gap-1 transition-all">
+        <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+        <span>Sao lưu</span>
+        <i class="fa-solid fa-chevron-down text-[8px] opacity-70"></i>
+      </button>
+
+      <!-- Dropdown Menu -->
+      <div id="backupDropdown" class="hidden absolute right-0 mt-1 w-48 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-200 py-1 z-50 text-xs">
+        <button onclick="exportBackup(); toggleBackupMenu();" class="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-download text-appblue-500"></i>
+          <span>Tải file Sao lưu (JSON)</span>
+        </button>
+        <label class="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-upload text-emerald-600"></i>
+          <span>Phục hồi từ File (.json)</span>
+          <input type="file" id="importFile" onchange="importBackup(event); toggleBackupMenu();" class="hidden" accept=".json,application/json">
+        </label>
+        <button onclick="openBackupTextModal(); toggleBackupMenu();" class="w-full text-left px-3 py-2 hover:bg-slate-100 flex items-center gap-2 border-t border-slate-100">
+          <i class="fa-solid fa-code text-amber-500"></i>
+          <span>Mã JSON (Copy / Dán)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SCROLLABLE CONTENT AREA -->
+  <main class="flex-1 overflow-y-auto px-3.5 py-3 space-y-3.5 max-w-lg mx-auto w-full">
+
+    <!-- TAB 1: CALENDAR & DAY OPERATIONS VIEW -->
+    <div id="tab1Content" class="space-y-3.5">
+      
+      <!-- 2. MINI CALENDAR GRID VIEW -->
+      <section class="bg-white rounded-2xl p-3 shadow-sm border border-slate-200/80">
+        <!-- Calendar Month/Year Header & Nav -->
+        <div class="flex items-center justify-between mb-2.5 px-1">
+          <button onclick="changeMonth(-1)" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 active:bg-slate-200">
+            <i class="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          <span id="calMonthYearTitle" class="text-sm font-bold text-slate-800">Tháng --/----</span>
+          <button onclick="changeMonth(1)" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 active:bg-slate-200">
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Day Names -->
+        <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-slate-400 mb-1">
+          <div>T2</div><div>T3</div><div>T4</div><div>T5</div><div>T6</div><div>T7</div><div>CN</div>
+        </div>
+
+        <!-- Calendar Dates Grid -->
+        <div id="calendarDaysGrid" class="grid grid-cols-7 gap-y-1 text-center">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
+      <!-- 3. CARD: "NGÀY ĐANG CHỌN" -->
+      <section class="bg-blue-50/70 rounded-2xl p-3.5 border border-blue-100 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[10px] font-bold text-appblue-500 uppercase tracking-wider">NGÀY ĐANG CHỌN</div>
+            <div id="selectedDateTitle" class="text-base font-extrabold text-slate-800 mt-0.5">Hôm nay, --/--/----</div>
+          </div>
+          <button onclick="openFormModal()" class="bg-appblue-500 hover:bg-appblue-600 active:scale-95 text-white font-semibold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all">
+            <i class="fa-solid fa-plus text-xs"></i> Lấy mẫu
+          </button>
+        </div>
+
+        <!-- Green CSV Export Button -->
+        <button onclick="exportCSV()" class="w-full bg-appgreen-500 hover:bg-appgreen-600 active:scale-[0.98] text-white py-2.5 px-3 rounded-xl font-semibold text-xs flex items-center justify-between shadow-sm transition-all">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-file-excel text-base"></i>
+            <span class="text-left leading-tight">Xuất file CSV báo cáo nén mẫu cho ngày</span>
+          </div>
+          <span id="csvDateLabel" class="text-[11px] bg-black/15 px-2 py-1 rounded-md font-bold">--/--/----</span>
+        </button>
+      </section>
+
+      <!-- 4. SECTION: "HOẠT ĐỘNG NGÀY NÀY" -->
+      <section class="space-y-3">
+        <div class="flex items-center gap-2 text-slate-800 font-bold text-xs uppercase tracking-wider">
+          <i class="fa-regular fa-clock text-appblue-500"></i> HOẠT ĐỘNG NGÀY NÀY
+        </div>
+
+        <!-- SUB 1: MẪU LẤY VÀO NGÀY NÀY -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-500 uppercase">MẪU LẤY VÀO NGÀY NÀY</span>
+            <span id="countTakenBadge" class="bg-slate-200 text-slate-700 text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
+          </div>
+
+          <div id="takenSamplesList" class="space-y-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- SUB 2: LỊCH NÉN (R7 / R28) NGÀY NÀY -->
+        <div class="space-y-2 pt-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-500 uppercase">LỊCH NÉN (R7 / R28) NGÀY NÀY</span>
+            <span id="countTestingBadge" class="bg-blue-100 text-appblue-600 text-[11px] font-bold px-2 py-0.5 rounded-full">0</span>
+          </div>
+
+          <div id="testingSamplesGroupedList" class="space-y-3">
+            <!-- Grouped by company rendered by JS -->
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- TAB 2: OVERVIEW ALL COMPRESSION SCHEDULES -->
+    <div id="tab2Content" class="space-y-3.5 hidden">
+      <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <h2 class="text-sm font-bold text-slate-800 flex items-center justify-between">
+          <span>🧪 Tất cả lịch nén R7/R28</span>
+          <span id="totalPendingBadge" class="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">0 chưa nén</span>
+        </h2>
+        <p class="text-xs text-slate-500">Danh sách toàn bộ các mẫu bê tông chờ nén trong tương lai</p>
+      </div>
+
+      <div id="allCompressionList" class="space-y-2.5">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 5. BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-2 flex justify-around items-center z-40 shadow-lg">
+    <button id="navTab1" onclick="switchTab(1)" class="flex flex-col items-center gap-1 text-appblue-600 font-semibold transition-colors">
+      <i class="fa-solid fa-calendar-days text-xl"></i>
+      <span class="text-[11px]">Lịch & Lấy mẫu</span>
+    </button>
+
+    <button id="navTab2" onclick="switchTab(2)" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors relative">
+      <div class="relative">
+        <i class="fa-solid fa-vial text-xl"></i>
+        <span id="navPendingBadge" class="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full min-w-[16px] text-center hidden">0</span>
+      </div>
+      <span class="text-[11px]">Lịch Nén (R7/R28)</span>
+    </button>
+  </nav>
+
+  <!-- MODAL FORM: ADD / EDIT SAMPLE -->
+  <div id="sampleModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+      <div class="bg-appblue-600 text-white px-4 py-3 flex justify-between items-center">
+        <h3 id="modalTitle" class="font-bold text-sm">Thêm Mẫu Bê Tông</h3>
+        <button onclick="closeFormModal()" class="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center text-sm">&times;</button>
+      </div>
+
+      <form id="sampleForm" onsubmit="saveSample(event)" class="p-4 space-y-3 text-xs">
+        <input type="hidden" id="sampleId">
+
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">Tên Công Ty / Nhà Thầu *</label>
+          <input type="text" id="company" required placeholder="VD: Coteccons, Hòa Bình..." class="w-full border rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold mb-1 text-slate-700">Ngày Lấy Mẫu (T0) *</label>
+            <input type="date" id="sampleDate" required onchange="calculateDates()" class="w-full border rounded-xl p-2 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-bold mb-1 text-slate-700">Mác Bê Tông *</label>
+            <input type="text" id="mac" required placeholder="VD: M350" class="w-full border rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+          </div>
+        </div>
+
+        <!-- Computed R7 and R28 Preview -->
+        <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px]">
+          <div>
+            <span class="text-slate-400">🗓️ Nén R7 (+7 ngày):</span>
+            <div id="previewR7" class="font-bold text-amber-600">--/--/----</div>
+          </div>
+          <div>
+            <span class="text-slate-400">🗓️ Nén R28 (+28 ngày):</span>
+            <div id="previewR28" class="font-bold text-purple-600">--/--/----</div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">Vị Trí Cột / Dầm / Sàn</label>
+          <input type="text" id="location" placeholder="VD: Trục B2-B5 | Cột Tầng 2" class="w-full border rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">Hạng Mục</label>
+          <input type="text" id="category" placeholder="VD: Bê tông dầm sàn" class="w-full border rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">Ghi Chú</label>
+          <input type="text" id="notes" placeholder="Ghi chú thêm..." class="w-full border rounded-xl p-2.5 text-xs focus:ring-2 focus:ring-appblue-500 outline-none">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="closeFormModal()" class="px-4 py-2 border rounded-xl text-slate-600 hover:bg-slate-100 font-medium">Hủy</button>
+          <button type="submit" class="px-4 py-2 bg-appblue-600 hover:bg-appblue-700 text-white rounded-xl font-bold shadow-xs">Lưu Mẫu & Tạo Lịch Nén</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL BACKUP / RESTORE TEXT FALLBACK -->
+  <div id="backupTextModal" class="fixed inset-0 bg-black/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+      <div class="bg-appblue-600 text-white px-4 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm">Sao Lưu & Dán Dữ Liệu (JSON)</h3>
+        <button onclick="closeBackupTextModal()" class="w-7 h-7 rounded-full hover:bg-white/20 flex items-center justify-center text-sm">&times;</button>
+      </div>
+      <div class="p-4 space-y-3 text-xs">
+        <p class="text-slate-500">Nếu trình duyệt không cho tải file, bạn có thể sao chép chuỗi mã bên dưới để cất giữ, hoặc dán mã sao lưu vào đây rồi ấn <b>Khôi Phục</b>.</p>
+        <textarea id="jsonDataTextarea" rows="6" class="w-full border rounded-xl p-2 font-mono text-[11px] focus:ring-2 focus:ring-appblue-500 outline-none bg-slate-50"></textarea>
+        <div class="flex gap-2">
+          <button onclick="copyBackupText()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-xl font-bold border border-slate-300">📋 Copy Mã</button>
+          <button onclick="restoreFromTextarea()" class="flex-1 bg-appblue-600 hover:bg-appblue-700 text-white py-2 rounded-xl font-bold">📥 Khôi Phục</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global State
+    let samples = [];
+    let currentNavTab = 1;
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let calendarCurrentDate = new Date(selectedDate);
+
+    // Initialization
+    document.addEventListener('DOMContentLoaded', function() {
+      loadInitialData();
+      renderCalendar();
+      updateSelectedDateUI();
+      renderAllViews();
+    });
+
+    function loadInitialData() {
+      const saved = localStorage.getItem('concrete_samples_v3');
+      if (saved) {
+        try {
+          samples = JSON.parse(saved);
+        } catch(e) {
+          samples = [];
+        }
+      } else {
+        samples = [
+          {
+            id: 'BT_001',
+            company: 'Công ty XD Coteccons',
+            sampleDate: '2026-10-21',
+            mac: 'M350',
+            location: 'Trục B2-B5 | Cột Tầng 2',
+            category: 'Bê tông cột',
+            notes: 'Mẫu đúc ca sáng',
+            collected: true,
+            testedR7: true,
+            testedR28: false
+          },
+          {
+            id: 'BT_002',
+            company: 'Tập đoàn Hòa Bình',
+            sampleDate: '2026-09-30',
+            mac: 'M300',
+            location: 'Sàn Tầng 5',
+            category: 'Dầm sàn',
+            notes: 'Mẫu nén r28',
+            collected: true,
+            testedR7: true,
+            testedR28: true
+          }
+        ];
+        localStorage.setItem('concrete_samples_v3', JSON.stringify(samples));
+      }
+    }
+
+    function saveToStorage() {
+      localStorage.setItem('concrete_samples_v3', JSON.stringify(samples));
+      renderCalendar();
+      renderAllViews();
+    }
+
+    // Helper functions
+    function addDays(dateStr, days) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split('T')[0];
+    }
+
+    function formatDateVN(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function calculateDates() {
+      const sampleDate = document.getElementById('sampleDate').value;
+      if (sampleDate) {
+        document.getElementById('previewR7').innerText = formatDateVN(addDays(sampleDate, 7));
+        document.getElementById('previewR28').innerText = formatDateVN(addDays(sampleDate, 28));
+      }
+    }
+
+    function updateSelectedDateUI() {
+      const d = new Date(selectedDate);
+      const isToday = selectedDate === new Date().toISOString().split('T')[0];
+      const daysVN = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+      const dayName = isToday ? 'Hôm nay' : daysVN[d.getDay()];
+      
+      document.getElementById('selectedDateTitle').innerText = `${dayName}, ${formatDateVN(selectedDate)}`;
+      document.getElementById('csvDateLabel').innerText = formatDateVN(selectedDate);
+    }
+
+    // Calendar Renderer
+    function renderCalendar() {
+      const year = calendarCurrentDate.getFullYear();
+      const month = calendarCurrentDate.getMonth();
+      
+      document.getElementById('calMonthYearTitle').innerText = `Tháng ${month + 1}/${year}`;
+
+      const firstDayOfMonth = new Date(year, month, 1);
+      const lastDayOfMonth = new Date(year, month + 1, 0);
+      
+      let startingDay = firstDayOfMonth.getDay() - 1;
+      if (startingDay === -1) startingDay = 6;
+
+      const totalDays = lastDayOfMonth.getDate();
+      const container = document.getElementById('calendarDaysGrid');
+      container.innerHTML = '';
+
+      for (let i = 0; i < startingDay; i++) {
+        container.appendChild(document.createElement('div'));
+      }
+
+      for (let day = 1; day <= totalDays; day++) {
+        const monthStr = String(month + 1).padStart(2, '0');
+        const dayStr = String(day).padStart(2, '0');
+        const dateKey = `${year}-${monthStr}-${dayStr}`;
+
+        const isSelected = dateKey === selectedDate;
+
+        const hasTaken = samples.some(s => s.sampleDate === dateKey);
+        const hasR7 = samples.some(s => addDays(s.sampleDate, 7) === dateKey);
+        const hasR28 = samples.some(s => addDays(s.sampleDate, 28) === dateKey);
+
+        const dayBtn = document.createElement('button');
+        dayBtn.onclick = () => selectCalendarDate(dateKey);
+
+        let activeClasses = isSelected 
+          ? 'bg-appblue-500 text-white font-bold shadow-md scale-105 rounded-xl' 
+          : 'text-slate-700 hover:bg-slate-100 rounded-lg';
+
+        dayBtn.className = `h-9 flex flex-col items-center justify-center relative transition-all ${activeClasses}`;
+        
+        let dotsHtml = '<div class="flex gap-0.5 justify-center mt-0.5 h-1.5">';
+        if (hasTaken) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-300' : 'bg-emerald-500'}"></span>`;
+        if (hasR7) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-300' : 'bg-amber-500'}"></span>`;
+        if (hasR28) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-purple-300' : 'bg-purple-500'}"></span>`;
+        dotsHtml += '</div>';
+
+        dayBtn.innerHTML = `<span class="text-xs leading-none">${day}</span>${dotsHtml}`;
+        container.appendChild(dayBtn);
+      }
+    }
+
+    function changeMonth(delta) {
+      calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + delta);
+      renderCalendar();
+    }
+
+    function selectCalendarDate(dateStr) {
+      selectedDate = dateStr;
+      renderCalendar();
+      updateSelectedDateUI();
+      renderAllViews();
+    }
+
+    function switchTab(tabNum) {
+      currentNavTab = tabNum;
+      if (tabNum === 1) {
+        document.getElementById('tab1Content').classList.remove('hidden');
+        document.getElementById('tab2Content').classList.add('hidden');
+        document.getElementById('navTab1').className = "flex flex-col items-center gap-1 text-appblue-600 font-semibold transition-colors";
+        document.getElementById('navTab2').className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors relative";
+      } else {
+        document.getElementById('tab1Content').classList.add('hidden');
+        document.getElementById('tab2Content').classList.remove('hidden');
+        document.getElementById('navTab1').className = "flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors";
+        document.getElementById('navTab2').className = "flex flex-col items-center gap-1 text-appblue-600 font-semibold transition-colors relative";
+      }
+    }
+
+    function renderAllViews() {
+      renderTakenSamples();
+      renderTestingSamplesGrouped();
+      renderAllCompressionOverview();
+      updateBadges();
+    }
+
+    // 1. Render Taken Samples
+    function renderTakenSamples() {
+      const container = document.getElementById('takenSamplesList');
+      const filtered = samples.filter(s => s.sampleDate === selectedDate);
+      
+      document.getElementById('countTakenBadge').innerText = filtered.length;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-dashed border-slate-200 rounded-xl p-3 text-center text-xs text-slate-400 italic">
+            Không có mẫu bê tông nào được lấy vào ngày này.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => `
+        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs space-y-2 text-xs">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-extrabold text-appblue-700 text-sm">${item.company}</div>
+              <div class="text-slate-700 mt-0.5">Mác bê tông: <b class="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">${item.mac}</b></div>
+              <div class="text-slate-500 text-[11px] mt-1">📍 ${item.location || 'Chưa ghi vị trí'} | 🏗️ ${item.category || 'Hạng mục N/A'}</div>
+              ${item.notes ? `<div class="text-slate-400 text-[11px] italic mt-0.5">📝 ${item.notes}</div>` : ''}
+              <div class="text-[10px] text-slate-400 mt-1">
+                📅 R7: ${formatDateVN(addDays(item.sampleDate, 7))} | R28: ${formatDateVN(addDays(item.sampleDate, 28))}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1">
+              <button onclick="openFormModal('${item.id}')" class="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200" title="Sửa thông tin">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="deleteSample('${item.id}')" class="p-1.5 rounded-lg border ${item.testedR28 ? 'text-slate-500 hover:text-red-500 border-slate-200 bg-slate-50' : 'text-slate-300 border-slate-100 bg-slate-50 cursor-not-allowed'}" title="${item.testedR28 ? 'Xóa mẫu' : 'Khóa: Chỉ xóa được sau khi đã nén R28'}">
+                <i class="fa-solid ${item.testedR28 ? 'fa-trash' : 'fa-lock'}"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span class="text-slate-500 text-[11px]">Trạng thái tập kết:</span>
+            <button onclick="toggleStatus('${item.id}', 'collected')" class="font-bold text-[11px] px-3 py-1 rounded-xl border transition-all ${item.collected ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-slate-100 text-slate-600 border-slate-300'}">
+              ${item.collected ? '🟢 Đã gom mẫu' : '🔴 Chưa gom'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. Render Testing Samples Grouped by Company
+    function renderTestingSamplesGrouped() {
+      const container = document.getElementById('testingSamplesGroupedList');
+      container.innerHTML = '';
+
+      const matched = samples.map(s => {
+        const isR7 = addDays(s.sampleDate, 7) === selectedDate;
+        const isR28 = addDays(s.sampleDate, 28) === selectedDate;
+        if (isR7 || isR28) {
+          return { ...s, compressType: isR7 ? 'R7' : 'R28' };
+        }
+        return null;
+      }).filter(Boolean);
+
+      document.getElementById('countTestingBadge').innerText = matched.length;
+
+      if (matched.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-dashed border-slate-200 rounded-xl p-3 text-center text-xs text-slate-400 italic">
+            Không có mẫu bê tông nào tới ngày nén vào ngày này.
+          </div>
+        `;
+        return;
+      }
+
+      const groups = matched.reduce((acc, item) => {
+        if (!acc[item.company]) acc[item.company] = [];
+        acc[item.company].push(item);
+        return acc;
+      }, {});
+
+      Object.keys(groups).forEach(company => {
+        const groupCard = document.createElement('div');
+        groupCard.className = "bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden";
+
+        let groupHtml = `
+          <div class="bg-slate-100 px-3.5 py-2.5 border-b border-slate-200 flex justify-between items-center">
+            <div class="font-black text-appblue-700 text-sm tracking-wide flex items-center gap-2">
+              <i class="fa-solid fa-building text-appblue-500"></i>
+              <span>${company}</span>
+            </div>
+            <span class="text-[10px] bg-appblue-600 text-white font-bold px-2 py-0.5 rounded-full">${groups[company].length} mẫu</span>
+          </div>
+          <div class="divide-y divide-slate-100">
+        `;
+
+        groupHtml += groups[company].map(item => {
+          const isR7 = item.compressType === 'R7';
+          const isTested = isR7 ? item.testedR7 : item.testedR28;
+          const toggleField = isR7 ? 'testedR7' : 'testedR28';
+          const tagBg = isR7 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-purple-100 text-purple-800 border-purple-200';
+
+          return `
+            <div class="p-3.5 space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="${tagBg} border font-bold text-[10px] px-2 py-0.5 rounded-md">
+                      Nén Mốc ${item.compressType}
+                    </span>
+                    <span class="bg-slate-800 text-white font-black text-xs px-2 py-0.5 rounded">
+                      ${item.mac}
+                    </span>
+                  </div>
+
+                  <div class="text-xs text-slate-700 font-semibold pt-0.5">
+                    📅 Ngày lấy mẫu: <span class="text-appblue-600 font-bold">${formatDateVN(item.sampleDate)}</span>
+                  </div>
+
+                  <div class="text-[11px] text-slate-500">
+                    📍 Vị trí: ${item.location || 'N/A'} | 🏗️ Hạng mục: ${item.category || 'N/A'}
+                  </div>
+
+                  ${item.notes ? `<div class="text-[11px] text-slate-400 italic">📝 Ghi chú: ${item.notes}</div>` : ''}
+                </div>
+
+                <button onclick="toggleStatus('${item.id}', '${toggleField}')" class="shrink-0 font-bold text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all shadow-xs ${isTested ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'}">
+                  <i class="fa-solid ${isTested ? 'fa-circle-check' : 'fa-circle'}"></i>
+                  <span>${isTested ? 'Đã nén' : 'Chưa nén'}</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        groupHtml += `</div>`;
+        groupCard.innerHTML = groupHtml;
+        container.appendChild(groupCard);
+      });
+    }
+
+    // 3. All Compression Overview (Tab 2)
+    function renderAllCompressionOverview() {
+      const container = document.getElementById('allCompressionList');
+      container.innerHTML = '';
+
+      let allSchedules = [];
+      samples.forEach(s => {
+        allSchedules.push({
+          ...s,
+          targetDate: addDays(s.sampleDate, 7),
+          type: 'R7',
+          tested: s.testedR7
+        });
+        allSchedules.push({
+          ...s,
+          targetDate: addDays(s.sampleDate, 28),
+          type: 'R28',
+          tested: s.testedR28
+        });
+      });
+
+      allSchedules.sort((a, b) => a.targetDate.localeCompare(b.targetDate));
+
+      const uncompressedCount = allSchedules.filter(x => !x.tested).length;
+      document.getElementById('totalPendingBadge').innerText = `${uncompressedCount} chưa nén`;
+
+      if (allSchedules.length === 0) {
+        container.innerHTML = `<div class="bg-white p-4 rounded-xl text-center text-xs text-slate-400">Chưa có lịch nén nào.</div>`;
+        return;
+      }
+
+      container.innerHTML = allSchedules.map(item => `
+        <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex justify-between items-center text-xs">
+          <div>
+            <div class="font-bold text-slate-800">${item.company}</div>
+            <div class="text-slate-500 mt-0.5">Mác: <b>${item.mac}</b> | Nén <b>${item.type}</b> vào: <span class="text-appblue-600 font-bold">${formatDateVN(item.targetDate)}</span></div>
+            <div class="text-[10px] text-slate-400">Ngày lấy: ${formatDateVN(item.sampleDate)}</div>
+          </div>
+          <button onclick="toggleStatus('${item.id}', '${item.type === 'R7' ? 'testedR7' : 'testedR28'}')" class="px-2.5 py-1.5 rounded-xl font-bold text-[11px] ${item.tested ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+            ${item.tested ? '✅ Đã nén' : '⏳ Chờ nén'}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function updateBadges() {
+      let pendingTotal = 0;
+      samples.forEach(s => {
+        if (!s.testedR7) pendingTotal++;
+        if (!s.testedR28) pendingTotal++;
+      });
+
+      const navBadge = document.getElementById('navPendingBadge');
+      if (pendingTotal > 0) {
+        navBadge.innerText = pendingTotal;
+        navBadge.classList.remove('hidden');
+      } else {
+        navBadge.classList.add('hidden');
+      }
+    }
+
+    // Modal & CRUD Operations
+    function openFormModal(id = null) {
+      document.getElementById('sampleForm').reset();
+      document.getElementById('sampleId').value = '';
+      document.getElementById('sampleDate').value = selectedDate;
+      calculateDates();
+
+      if (id) {
+        const item = samples.find(s => s.id === id);
+        if (item) {
+          document.getElementById('modalTitle').innerText = "Sửa Thông Tin Mẫu Bê Tông";
+          document.getElementById('sampleId').value = item.id;
+          document.getElementById('company').value = item.company;
+          document.getElementById('sampleDate').value = item.sampleDate;
+          document.getElementById('mac').value = item.mac;
+          document.getElementById('location').value = item.location || '';
+          document.getElementById('category').value = item.category || '';
+          document.getElementById('notes').value = item.notes || '';
+          calculateDates();
+        }
+      } else {
+        document.getElementById('modalTitle').innerText = "Thêm Mẫu Bê Tông Mới";
+      }
+
+      document.getElementById('sampleModal').classList.remove('hidden');
+      document.getElementById('sampleModal').classList.add('flex');
+    }
+
+    function closeFormModal() {
+      document.getElementById('sampleModal').classList.add('hidden');
+      document.getElementById('sampleModal').classList.remove('flex');
+    }
+
+    function saveSample(e) {
+      e.preventDefault();
+      const id = document.getElementById('sampleId').value;
+      const company = document.getElementById('company').value.trim();
+      const sampleDate = document.getElementById('sampleDate').value;
+      const mac = document.getElementById('mac').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const category = document.getElementById('category').value.trim();
+      const notes = document.getElementById('notes').value.trim();
+
+      if (id) {
+        const index = samples.findIndex(s => s.id === id);
+        if (index !== -1) {
+          samples[index] = { ...samples[index], company, sampleDate, mac, location, category, notes };
+        }
+      } else {
+        const newSample = {
+          id: 'BT_' + Date.now(),
+          company,
+          sampleDate,
+          mac,
+          location,
+          category,
+          notes,
+          collected: false,
+          testedR7: false,
+          testedR28: false
+        };
+        samples.push(newSample);
+      }
+
+      saveToStorage();
+      closeFormModal();
+    }
+
+    function deleteSample(id) {
+      const item = samples.find(s => s.id === id);
+      if (!item) return;
+
+      if (!item.testedR28) {
+        alert("⚠️ CHÚ Ý: Mẫu bê tông này CHƯA HOÀN THÀNH nén R28!\n\nBạn chỉ có thể xóa mẫu sau khi đã hoàn thành nén R28 để bảo đảm tính toàn vẹn của lịch nén.");
+        return;
+      }
+
+      if (confirm(`Bạn có chắc chắn muốn xóa mẫu bê tông của ${item.company} (${item.mac})?`)) {
+        samples = samples.filter(s => s.id !== id);
+        saveToStorage();
+      }
+    }
+
+    function toggleStatus(id, field) {
+      const index = samples.findIndex(s => s.id === id);
+      if (index !== -1) {
+        samples[index][field] = !samples[index][field];
+        saveToStorage();
+      }
+    }
+
+    function toggleBackupMenu() {
+      const menu = document.getElementById('backupDropdown');
+      menu.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('backupDropdown');
+      const btn = e.target.closest('button');
+      if (dropdown && !dropdown.classList.contains('hidden') && (!btn || !btn.getAttribute('onclick')?.includes('toggleBackupMenu'))) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // CSV Export
+    function exportCSV() {
+      const matched = samples.map(s => {
+        const isR7 = addDays(s.sampleDate, 7) === selectedDate;
+        const isR28 = addDays(s.sampleDate, 28) === selectedDate;
+        if (isR7 || isR28) {
+          const isTested = isR7 ? s.testedR7 : s.testedR28;
+          return {
+            company: s.company,
+            sampleDate: formatDateVN(s.sampleDate),
+            dateR7: formatDateVN(addDays(s.sampleDate, 7)),
+            dateR28: formatDateVN(addDays(s.sampleDate, 28)),
+            compressType: isR7 ? 'R7' : 'R28',
+            category: s.category || '',
+            location: s.location || '',
+            mac: s.mac,
+            tested: isTested ? 'Đã nén' : 'Chưa nén',
+            notes: s.notes || ''
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      if (matched.length === 0) {
+        alert(`Không có mẫu nén nào trong ngày ${formatDateVN(selectedDate)}.`);
+        return;
+      }
+
+      // Group by company
+      const groups = matched.reduce((acc, item) => {
+        if (!acc[item.company]) acc[item.company] = [];
+        acc[item.company].push(item);
+        return acc;
+      }, {});
+
+      let csvContent = "\uFEFF";
+      csvContent += `=== BÁO CÁO LỊCH NÉN MẪU BÊ TÔNG NGÀY ${formatDateVN(selectedDate)} ===\n\n`;
+
+      Object.keys(groups).forEach((companyName, groupIdx) => {
+        csvContent += `CÔNG TY / NHÀ THẦU: ${companyName.toUpperCase()}\n`;
+        csvContent += "STT,Ngày Lấy Mẫu,Mác,Lịch Nén R7,Lịch Nén R28,Loại Mốc Nén,Trạng Thái,Hạng Mục,Vị Trí,Ghi Chú\n";
+
+        groups[companyName].forEach((r, idx) => {
+          csvContent += `"${idx + 1}","${r.sampleDate}","${r.mac}","${r.dateR7}","${r.dateR28}","${r.compressType}","${r.tested}","${r.category}","${r.location}","${r.notes}"\n`;
+        });
+
+        // Add 2 blank lines between companies
+        csvContent += "\n\n";
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Lich_nen_mau_${selectedDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Backup & Restore
+    function exportBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(samples, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = dataStr;
+      downloadAnchor.download = `Backup_Mau_Be_Tong_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importBackup(e) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (Array.isArray(imported)) {
+            samples = imported;
+            saveToStorage();
+            alert("Đã phục hồi dữ liệu thành công!");
+          } else {
+            alert("File dữ liệu không hợp lệ!");
+          }
+        } catch (err) {
+          alert("Lỗi khi đọc file sao lưu!");
+        }
+      };
+      if (e.target.files[0]) {
+        reader.readAsText(e.target.files[0]);
+      }
+    }
+
+    function openBackupTextModal() {
+      document.getElementById('jsonDataTextarea').value = JSON.stringify(samples, null, 2);
+      document.getElementById('backupTextModal').classList.remove('hidden');
+      document.getElementById('backupTextModal').classList.add('flex');
+    }
+
+    function closeBackupTextModal() {
+      document.getElementById('backupTextModal').classList.add('hidden');
+      document.getElementById('backupTextModal').classList.remove('flex');
+    }
+
+    function copyBackupText() {
+      const textarea = document.getElementById('jsonDataTextarea');
+      textarea.select();
+      document.execCommand('copy');
+      alert("Đã sao chép chuỗi mã sao lưu vào khay nhớ tạm!");
+    }
+
+    function restoreFromTextarea() {
+      try {
+        const raw = document.getElementById('jsonDataTextarea').value;
+        const imported = JSON.parse(raw);
+        if (Array.isArray(imported)) {
+          samples = imported;
+          saveToStorage();
+          closeBackupTextModal();
+          alert("Khôi phục dữ liệu từ văn bản thành công!");
+        } else {
+          alert("Mã dữ liệu không hợp lệ!");
+        }
+      } catch (e) {
+        alert("Lỗi cú pháp JSON khi đọc dữ liệu!");
+      }
+    }
+  </script>
+</body>
+</html>
